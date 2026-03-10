@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>K线大师 - 模拟交易</title>
+    <script src="/static/js/echarts.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- ========== 登录页 ========== -->
+    <div id="view-login" class="view active">
+        <div class="login-container">
+            <div class="logo-area">
+                <div class="logo-glow"></div>
+                <div class="logo-icon">📈</div>
+                <h1 class="logo-title">K线大师</h1>
+                <p class="logo-subtitle">模拟交易 · 练就盘感</p>
+            </div>
+            <div class="login-form">
+                <div class="input-wrapper">
+                    <input type="text" id="nickname-input" placeholder="输入你的昵称开始" maxlength="20" autocomplete="off">
+                </div>
+                <button id="btn-enter" class="btn-primary btn-glow">进入游戏</button>
+                <p class="login-hint">首次输入昵称自动注册，再次输入直接登录</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 大厅页 ========== -->
+    <div id="view-lobby" class="view">
+        <div class="lobby-header">
+            <h2 class="lobby-title">K线大师</h2>
+            <div class="user-badge">
+                <span class="user-avatar">👤</span>
+                <span id="lobby-nickname">---</span>
+                <button class="btn-logout" id="btn-logout" title="退出登录">退出</button>
+            </div>
+        </div>
+
+        <div class="lobby-content">
+            <!-- 开始按钮 -->
+            <div class="hero-card" id="btn-new-game">
+                <div class="hero-bg"></div>
+                <div class="hero-content">
+                    <div class="hero-icon">🎯</div>
+                    <h3>开始挑战</h3>
+                    <p>随机一只股票走势，30个交易日<br>看看你能赚多少？</p>
+                    <div class="hero-arrow">→</div>
+                </div>
+            </div>
+
+            <!-- 用户统计 -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <span class="stat-value mono" id="stat-games">0</span>
+                    <span class="stat-label">已完成</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value mono" id="stat-avg-profit">0%</span>
+                    <span class="stat-label">平均收益</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value mono" id="stat-best">0%</span>
+                    <span class="stat-label">最佳成绩</span>
+                </div>
+            </div>
+
+            <!-- 快捷入口 -->
+            <div class="quick-entries">
+                <div class="quick-card" id="btn-history">
+                    <span class="quick-icon">📊</span>
+                    <span>我的战绩</span>
+                </div>
+                <div class="quick-card" id="btn-goto-rank">
+                    <span class="quick-icon">🏆</span>
+                    <span>排行榜</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item active" data-view="lobby">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </div>
+            <div class="nav-item" data-view="ranking">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">排行</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 游戏页 ========== -->
+    <div id="view-game" class="view">
+        <div class="game-header">
+            <button class="btn-icon" id="btn-game-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <div class="game-title-area">
+                <div class="game-title-row">
+                    <span class="game-scenario" id="game-scenario-name">---</span>
+                    <span class="sector-tag" id="game-sector">---</span>
+                </div>
+                <span class="day-badge mono">第 <span id="game-day">0</span>/30 天</span>
+            </div>
+            <div class="chart-mode-toggle">
+                <button class="mode-btn active" data-mode="kline" title="K线图">K线</button>
+                <button class="mode-btn" data-mode="line" title="净值趋势图">净值</button>
+                <button class="mode-btn" data-mode="both" title="叠加显示">叠加</button>
+            </div>
+        </div>
+
+        <!-- K线图表 -->
+        <div class="chart-wrapper">
+            <div id="main-chart"></div>
+        </div>
+
+        <!-- 副图指标切换 -->
+        <div class="sub-chart-toggle">
+            <button class="sub-btn active" data-sub="vol">成交量</button>
+            <button class="sub-btn" data-sub="macd">MACD</button>
+            <button class="sub-btn" data-sub="kdj">KDJ</button>
+            <button class="sub-btn" data-sub="trix">TRIX</button>
+        </div>
+
+        <!-- 信息面板 -->
+        <div class="info-panel">
+            <div class="info-grid">
+                <div class="info-cell">
+                    <span class="info-label">当前价</span>
+                    <span class="info-value mono" id="info-price">--</span>
+                </div>
+                <div class="info-cell">
+                    <span class="info-label">资金</span>
+                    <span class="info-value mono" id="info-cash">¥100,000</span>
+                </div>
+                <div class="info-cell">
+                    <span class="info-label">持仓</span>
+                    <span class="info-value mono" id="info-shares">0 股</span>
+                </div>
+                <div class="info-cell">
+                    <span class="info-label">总资产</span>
+                    <span class="info-value mono" id="info-total">¥100,000</span>
+                </div>
+            </div>
+            <div class="profit-bar">
+                <span class="profit-label">收益率</span>
+                <span class="profit-value mono" id="info-profit">0.00%</span>
+            </div>
+        </div>
+
+        <!-- 资讯面板（触发按钮） -->
+        <div class="news-panel" id="news-panel" style="display:none;">
+            <div class="news-toggle" id="news-toggle">
+                <span class="news-toggle-icon">📰</span>
+                <span>资讯</span>
+                <span class="news-badge" id="news-badge" style="display:none">0</span>
+                <span class="news-arrow" id="news-arrow">▼</span>
+            </div>
+        </div>
+
+        <!-- 资讯底部抽屉（fixed覆盖层） -->
+        <div class="news-backdrop" id="news-backdrop"></div>
+        <div class="news-sheet" id="news-content">
+            <div class="news-sheet-handle"></div>
+            <div class="news-sheet-header">
+                <span>📰 资讯详情</span>
+                <button class="news-sheet-close" id="news-sheet-close">✕</button>
+            </div>
+            <div class="news-sheet-body">
+                <!-- 财报快照 -->
+                <div class="fin-snapshot" id="fin-snapshot" style="display:none;">
+                    <div class="fin-header">
+                        <span class="fin-title">📊 财报快照</span>
+                        <span class="fin-date" id="fin-date"></span>
+                    </div>
+                    <div class="fin-grid" id="fin-grid"></div>
+                </div>
+                <!-- 新闻分隔线 -->
+                <div class="news-divider" id="news-divider" style="display:none;">📢 公告动态</div>
+                <!-- 新闻列表 -->
+                <div class="news-list" id="news-list"></div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-bar">
+            <button class="btn-trade btn-buy" id="btn-buy" disabled>买入</button>
+            <button class="btn-trade btn-sell" id="btn-sell" disabled>卖出</button>
+            <button class="btn-next" id="btn-next-day">开始交易 →</button>
+        </div>
+
+        <!-- 交易弹窗 -->
+        <div class="modal-mask" id="trade-modal">
+            <div class="modal-sheet">
+                <div class="modal-handle"></div>
+                <h3 class="modal-title" id="modal-title">买入</h3>
+                <div class="modal-info-row">
+                    <span>当前价格</span>
+                    <span class="mono" id="modal-price">--</span>
+                </div>
+                <div class="modal-info-row">
+                    <span id="modal-available-label">可用资金</span>
+                    <span class="mono" id="modal-available">¥0</span>
+                </div>
+                <div class="pct-buttons">
+                    <button class="pct-btn" data-pct="25">25%</button>
+                    <button class="pct-btn" data-pct="50">50%</button>
+                    <button class="pct-btn" data-pct="75">75%</button>
+                    <button class="pct-btn active" data-pct="100">全部</button>
+                </div>
+                <div class="modal-preview">
+                    <p id="modal-preview-text">预计买入 0 股</p>
+                    <p class="preview-amount" id="modal-preview-amount">花费 ¥0</p>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-modal-cancel" id="btn-modal-cancel">取消</button>
+                    <button class="btn-modal-confirm" id="btn-modal-confirm">确认买入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 结算页 ========== -->
+    <div id="view-result" class="view">
+        <div class="result-container">
+            <div class="result-top">
+                <h2 class="result-title">交易结算</h2>
+                <p class="result-scenario" id="result-scenario">---</p>
+            </div>
+            <div class="result-card">
+                <div class="result-profit mono" id="result-profit">+0.00%</div>
+                <p class="result-grade" id="result-grade">📊</p>
+            </div>
+
+            <!-- 真实股票信息揭晓 -->
+            <div class="reveal-card" id="reveal-card" style="display:none;">
+                <div class="reveal-title">🔍 股票揭晓</div>
+                <div class="reveal-info">
+                    <div class="reveal-row">
+                        <span>股票名称</span>
+                        <span class="mono" id="reveal-name">---</span>
+                    </div>
+                    <div class="reveal-row">
+                        <span>股票代码</span>
+                        <span class="mono" id="reveal-code">---</span>
+                    </div>
+                    <div class="reveal-row">
+                        <span>所属板块</span>
+                        <span class="mono" id="reveal-sector">---</span>
+                    </div>
+                    <div class="reveal-row">
+                        <span>时间段</span>
+                        <span class="mono" id="reveal-period">---</span>
+                    </div>
+                    <div class="reveal-row">
+                        <span>同期大盘</span>
+                        <span class="mono" id="reveal-market">---</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-details">
+                <div class="detail-row">
+                    <span>初始资金</span>
+                    <span class="mono">¥100,000.00</span>
+                </div>
+                <div class="detail-row">
+                    <span>最终资产</span>
+                    <span class="mono" id="result-final">¥100,000.00</span>
+                </div>
+                <div class="detail-row highlight">
+                    <span>盈亏金额</span>
+                    <span class="mono" id="result-pnl">¥0.00</span>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-primary btn-glow" id="btn-play-again">再来一局</button>
+                <button class="btn-accent" id="btn-pk-same">PK同股 ⚔️</button>
+                <button class="btn-secondary" id="btn-back-lobby">返回大厅</button>
+                <button class="btn-link" id="btn-view-rank">查看排行 →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 排行榜页 ========== -->
+    <div id="view-ranking" class="view">
+        <div class="page-header">
+            <button class="btn-icon" id="btn-rank-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <h2>排行榜</h2>
+            <div style="width:44px"></div>
+        </div>
+        <div class="rank-tabs">
+            <button class="rank-tab active" data-tab="total">总排行</button>
+            <button class="rank-tab" data-tab="recent">近期战绩</button>
+            <button class="rank-tab" data-tab="stock">同股PK</button>
+        </div>
+        <div class="rank-list" id="ranking-list">
+            <div class="empty-state">暂无数据</div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item" data-view="lobby">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </div>
+            <div class="nav-item active" data-view="ranking">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">排行</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 历史页 ========== -->
+    <div id="view-history" class="view">
+        <div class="page-header">
+            <button class="btn-icon" id="btn-history-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <h2>我的战绩</h2>
+            <div style="width:44px"></div>
+        </div>
+        <div class="history-list" id="history-list">
+            <div class="empty-state">暂无记录</div>
+        </div>
+    </div>
+
+    <!-- 全局提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

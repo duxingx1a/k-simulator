@@ -9,7 +9,7 @@ from routes.auth import auth_bp
 from routes.game import game_bp
 from routes.rank import rank_bp
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
 # 优先使用环境变量中的固定密钥，避免容器重启导致登录会话失效
 app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 

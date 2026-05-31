@@ -16,12 +16,8 @@ desktop.ini
 game.db
 
 # 离线数据生成脚本不需要进生产镜像
-add_more_data.py
-add_sector_data.py
-add_sector_index.py
-init_data.py
+data/
 migrate_db.py
-utils/
 
 # 文档
 README.md

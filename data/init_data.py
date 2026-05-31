@@ -22,7 +22,7 @@ except ImportError:
     print('❌ 请先安装 pandas：pip install pandas -i https://pypi.tuna.tsinghua.edu.cn/simple')
     sys.exit(1)
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stock_data.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'stock_data.db')
 
 # 代表性A股股票池（覆盖各行业、各市值、各风格）
 STOCK_POOL = [

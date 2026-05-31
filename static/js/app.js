@@ -187,6 +187,62 @@ function showView(viewId) {
     }
 }
 
+// ========== 历史用户管理 ==========
+
+/** 获取最近登录的用户列表（最多5个） */
+function getRecentUsers() {
+    try {
+        return JSON.parse(localStorage.getItem('kmaster_recent_users') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+/** 登录成功后将用户存入历史列表（去重+置顶，最多5个） */
+function saveRecentUser(user) {
+    const list = getRecentUsers().filter(u => u.id !== user.id);
+    list.unshift({ id: user.id, nickname: user.nickname });
+    localStorage.setItem('kmaster_recent_users', JSON.stringify(list.slice(0, 5)));
+    // 同时保留单用户字段，兼容现有逻辑
+    localStorage.setItem('kmaster_user', JSON.stringify(user));
+}
+
+/** 渲染登录页历史用户卡片 */
+function renderRecentUsers() {
+    const list = getRecentUsers();
+    const section = document.getElementById('recent-users-section');
+    const container = document.getElementById('recent-users-list');
+    if (!section || !container) return;
+    if (list.length === 0) { section.style.display = 'none'; return; }
+
+    const avatars = ['🐉', '🦁', '🐯', '🦊', '🐺', '🦅', '🐻', '🦋'];
+    container.innerHTML = list.map((u, i) => `
+        <div class="recent-user-card" onclick="quickLogin('${u.nickname.replace(/'/g, "\\'")}')">
+            <div class="recent-user-avatar">${avatars[i % avatars.length]}</div>
+            <div class="recent-user-info">
+                <div class="recent-user-name">${escapeHtml(u.nickname)}</div>
+                <div class="recent-user-hint">点击一键进入</div>
+            </div>
+            <div class="recent-user-arrow">›</div>
+        </div>
+    `).join('');
+    section.style.display = 'block';
+}
+
+/** 一键快速登录 */
+async function quickLogin(nickname) {
+    try {
+        const res = await api('/api/register', { nickname });
+        state.user = { id: res.id, nickname: res.nickname };
+        saveRecentUser(state.user);
+        showToast('欢迎回来，' + res.nickname + '！');
+        enterLobby();
+        history.replaceState({ view: 'view-lobby' }, '');
+    } catch (e) {
+        showToast(e.message);
+    }
+}
+
 // ========== 登录逻辑 ==========
 
 async function handleLogin() {
@@ -201,8 +257,8 @@ async function handleLogin() {
         const res = await api('/api/register', { nickname });
         state.user = { id: res.id, nickname: res.nickname };
 
-        // 保存到localStorage
-        localStorage.setItem('kmaster_user', JSON.stringify(state.user));
+        // 保存到历史用户列表
+        saveRecentUser(state.user);
 
         showToast(res.is_new ? '注册成功！' : '欢迎回来！');
         enterLobby();
@@ -2347,18 +2403,22 @@ document.addEventListener('DOMContentLoaded', () => {
     bindEvents();
     window.addEventListener('popstate', handleBrowserBack);
 
-    // 尝试从localStorage恢复登录状态
-    const saved = localStorage.getItem('kmaster_user');
-    if (saved) {
+    // 迁移旧版单用户数据到新版历史列表
+    const legacySaved = localStorage.getItem('kmaster_user');
+    if (legacySaved) {
         try {
-            state.user = JSON.parse(saved);
-            enterLobby();
-            history.replaceState({ view: 'view-lobby' }, '');
+            const legacyUser = JSON.parse(legacySaved);
+            // 如果历史列表里还没有这个用户，把他加进去
+            const recent = getRecentUsers();
+            if (!recent.find(u => u.id === legacyUser.id)) {
+                saveRecentUser(legacyUser);
+            }
         } catch (e) {
             localStorage.removeItem('kmaster_user');
-            history.replaceState({ view: 'view-login' }, '');
         }
-    } else {
-        history.replaceState({ view: 'view-login' }, '');
     }
+
+    // 始终显示登录页（带历史用户快速登录），不再静默跳转
+    renderRecentUsers();
+    history.replaceState({ view: 'view-login' }, '');
 });

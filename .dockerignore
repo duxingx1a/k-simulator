@@ -1,0 +1,27 @@
+# 构建上下文排除项：减小镜像、避免把本地用户数据带上服务器
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+.env
+.trash_safe/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 本地用户数据库不进镜像（服务器上由应用新建空表）
+game.db
+
+# 离线数据生成脚本不需要进生产镜像
+add_more_data.py
+add_sector_data.py
+add_sector_index.py
+init_data.py
+migrate_db.py
+utils/
+
+# 文档
+README.md

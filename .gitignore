@@ -10,6 +10,9 @@ build/
 venv/
 .env
 
+# 用户数据库（运行时生成，不纳入版本控制；服务器用 Docker 卷持久化）
+game.db
+
 # 安全垃圾桶
 .trash_safe/
 

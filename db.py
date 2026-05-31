@@ -14,6 +14,13 @@ STOCK_DB_PATH = os.path.join(BASE_DIR, 'stock_data.db')
 
 _stock_manager = StockDataManager()
 
+# 允许通过环境变量 DATA_DIR 指定数据库存放目录（用于 Docker 持久化卷）
+_DATA_DIR = os.environ.get('DATA_DIR')
+if _DATA_DIR:
+    os.makedirs(_DATA_DIR, exist_ok=True)
+    GAME_DB_PATH = os.path.join(_DATA_DIR, 'game.db')
+    STOCK_DB_PATH = os.path.join(_DATA_DIR, 'stock_data.db')
+
 
 def get_db():
     """连接用户数据库（users / games / trades）"""

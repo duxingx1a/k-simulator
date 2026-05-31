@@ -1,0 +1,18 @@
+services:
+  k-simulator:
+    build: .
+    image: k-simulator:latest
+    container_name: k-simulator
+    restart: unless-stopped
+    ports:
+      - "18001:5000"
+    environment:
+      # 固定会话密钥，避免重启后登录失效（可自行修改为任意随机串）
+      - SECRET_KEY=change-me-to-a-random-string
+      - DATA_DIR=/data
+    volumes:
+      # 持久化数据库（game.db 用户数据 + stock_data.db 股票数据）
+      - k_data:/data
+
+volumes:
+  k_data:

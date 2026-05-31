@@ -1,6 +1,7 @@
 """
 K线大师 - 模拟交易游戏后端
 """
+import os
 import secrets
 from flask import Flask, render_template
 from db import init_db
@@ -9,7 +10,8 @@ from routes.game import game_bp
 from routes.rank import rank_bp
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)
+# 优先使用环境变量中的固定密钥，避免容器重启导致登录会话失效
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
 # 注册蓝图
 app.register_blueprint(auth_bp)

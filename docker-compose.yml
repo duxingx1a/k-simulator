@@ -13,6 +13,8 @@ services:
     volumes:
       # 持久化数据库（game.db 用户数据 + stock_data.db 股票数据）
       - k_data:/data
+      # 挂载代码目录，git pull 后 restart 即可生效，无需重建镜像
+      - /root/k-simulator:/app
 
 volumes:
   k_data:

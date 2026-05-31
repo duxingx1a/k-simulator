@@ -4,35 +4,35 @@
    ============================ */
 
 :root {
-    /* 颜色系统 */
-    --bg-base: #080b12;
-    --bg-surface: #0f1319;
-    --bg-card: #151a24;
-    --bg-elevated: #1c2230;
-    --bg-hover: #252d3d;
+    /* 颜色系统 - 深夜交易主题 */
+    --bg-base: #04080f;       /* 深底色，拉开与上层的层次 */
+    --bg-surface: #080e1a;    /* 表面层，+2阶 */
+    --bg-card: #0c1420;       /* 卡片层，+2阶 */
+    --bg-elevated: #121e2e;   /* 浮层/弹窗，+2阶 */
+    --bg-hover: #1a2a3c;      /* 悬停/激活态 */
 
-    --text-primary: #eaeef3;
-    --text-secondary: #7a8599;
-    --text-muted: #3f4a5e;
+    --text-primary: #ecf2fa;  /* 主文字，偏冷白 */
+    --text-secondary: #8898b8; /* 次级文字，更清晰 */
+    --text-muted: #607090;    /* 辅助文字（原版#3f4a5e对比度不足） */
 
-    --border: #1a2030;
-    --border-light: #242f42;
+    --border: #162034;        /* 边框更清晰 */
+    --border-light: #223048;  /* 亮边框 */
 
     /* A股惯例：红涨绿跌 */
-    --rise: #ef4444;
-    --rise-bg: rgba(239, 68, 68, 0.1);
-    --fall: #22c55e;
-    --fall-bg: rgba(34, 197, 94, 0.1);
+    --rise: #f04444;
+    --rise-bg: rgba(240, 68, 68, 0.12);
+    --fall: #1ec870;
+    --fall-bg: rgba(30, 200, 112, 0.1);
 
     --accent: #f0a030;
-    --accent-bg: rgba(240, 160, 48, 0.1);
-    --accent-blue: #3b82f6;
-    --accent-purple: #a855f7;
+    --accent-bg: rgba(240, 160, 48, 0.12);
+    --accent-blue: #4890f8;
+    --accent-purple: #a060f0;
 
     /* 光晕色 */
-    --glow-gold: rgba(240, 160, 48, 0.25);
-    --glow-red: rgba(239, 68, 68, 0.15);
-    --glow-blue: rgba(59, 130, 246, 0.15);
+    --glow-gold: rgba(240, 160, 48, 0.30);
+    --glow-red: rgba(240, 68, 68, 0.22);
+    --glow-blue: rgba(72, 144, 248, 0.20);
 
     /* 字体 */
     --font-main: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
@@ -46,9 +46,9 @@
     --radius-xl: 20px;
 
     /* 阴影 */
-    --shadow-card: 0 2px 8px rgba(0,0,0,0.3), 0 0 1px rgba(255,255,255,0.03) inset;
-    --shadow-elevated: 0 8px 24px rgba(0,0,0,0.4), 0 0 1px rgba(255,255,255,0.05) inset;
-    --shadow-glow: 0 0 20px var(--glow-gold);
+    --shadow-card: 0 2px 12px rgba(0,0,0,0.5), 0 0 1px rgba(255,255,255,0.04) inset;
+    --shadow-elevated: 0 8px 32px rgba(0,0,0,0.65), 0 0 1px rgba(255,255,255,0.06) inset;
+    --shadow-glow: 0 0 24px var(--glow-gold);
 
     /* 安全距离 */
     --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -125,8 +125,8 @@ html, body {
     padding: 40px 24px;
     background:
         radial-gradient(ellipse at 30% 20%, rgba(240, 160, 48, 0.06) 0%, transparent 60%),
-        radial-gradient(ellipse at 70% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 60%),
-        linear-gradient(160deg, #080b12 0%, #0f1520 50%, #120e1e 100%);
+        radial-gradient(ellipse at 70% 80%, rgba(72, 144, 248, 0.06) 0%, transparent 55%),
+        linear-gradient(160deg, #04080f 0%, #090e1c 50%, #0c0b1e 100%);
     min-height: 100vh;
 }
 
@@ -338,7 +338,7 @@ html, body {
 .hero-bg {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, #101830, #1e1040);
+    background: linear-gradient(135deg, #091524 0%, #110c34 100%);
     z-index: 0;
 }
 
@@ -485,13 +485,27 @@ html, body {
     padding: 10px 0;
     cursor: pointer;
     color: var(--text-muted);
-    transition: color 0.15s;
+    transition: color 0.2s;
     font-size: 10px;
     gap: 2px;
+    position: relative;
 }
 
 .nav-item.active {
     color: var(--accent);
+}
+
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 0 0 3px 3px;
+    box-shadow: 0 0 8px var(--glow-gold);
 }
 
 .nav-icon {
@@ -791,7 +805,7 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 998;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(4, 8, 20, 0.72);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -1243,7 +1257,7 @@ html, body {
     justify-content: flex-start;
     background:
         radial-gradient(ellipse at 50% 30%, rgba(240, 160, 48, 0.04) 0%, transparent 60%),
-        linear-gradient(160deg, #080b12 0%, #0f1520 50%, #0d1810 100%);
+        linear-gradient(160deg, #04080f 0%, #090e1c 50%, #080e0c 100%);
     min-height: 100vh;
     overflow-y: auto;
 }
@@ -1783,4 +1797,302 @@ html, body {
     .action-bar {
         padding: 6px 14px;
     }
+}
+
+/* ============================
+   K线图鉴页
+   ============================ */
+.patterns-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: calc(70px + var(--safe-bottom));
+}
+
+.pattern-tabs {
+    display: flex;
+    gap: 0;
+    padding: 10px 16px 0;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.pattern-tab {
+    flex: 1;
+    padding: 10px 4px;
+    font-size: 13px;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-main);
+}
+
+.pattern-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.signal-filters {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.signal-filters::-webkit-scrollbar { display: none; }
+
+.signal-btn {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-main);
+}
+
+.signal-btn.active {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.signal-btn[data-signal="bullish"].active {
+    background: var(--rise-bg);
+    border-color: var(--rise);
+    color: var(--rise);
+}
+
+.signal-btn[data-signal="bearish"].active {
+    background: var(--fall-bg);
+    border-color: var(--fall);
+    color: var(--fall);
+}
+
+.patterns-count-row {
+    padding: 4px 16px 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.patterns-count-row strong {
+    color: var(--accent);
+    font-family: var(--font-mono);
+}
+
+.patterns-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 4px 12px 12px;
+}
+
+/* 形态卡片 */
+.pattern-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+    box-shadow: var(--shadow-card);
+    animation: fadeInUp 0.25s ease both;
+}
+
+.pattern-card:active {
+    transform: scale(0.97);
+}
+
+.pattern-card:hover {
+    border-color: var(--border-light);
+    box-shadow: var(--shadow-elevated);
+}
+
+.pattern-card-canvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+    background: #04080f;
+}
+
+.pattern-card-info {
+    padding: 8px 10px 10px;
+}
+
+.pattern-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pattern-card-engname {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pattern-card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* 信号标签 */
+.signal-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.signal-badge.bullish {
+    background: var(--rise-bg);
+    color: var(--rise);
+    border: 1px solid rgba(239,68,68,0.25);
+}
+
+.signal-badge.bearish {
+    background: var(--fall-bg);
+    color: var(--fall);
+    border: 1px solid rgba(34,197,94,0.25);
+}
+
+.signal-badge.neutral {
+    background: rgba(240,160,48,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(240,160,48,0.25);
+}
+
+.signal-badge.continuation {
+    background: rgba(59,130,246,0.1);
+    color: var(--accent-blue);
+    border: 1px solid rgba(59,130,246,0.25);
+}
+
+/* 分类标签 */
+.cat-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+/* 详情弹窗 */
+.pattern-detail-sheet {
+    max-height: 85vh;
+    overflow-y: auto;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+.pattern-detail-header {
+    display: flex;
+    gap: 14px;
+    padding: 12px 16px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.pattern-detail-canvas-wrap {
+    flex-shrink: 0;
+    width: 160px;
+    height: 120px;
+    background: #04080f;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+#pattern-detail-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.pattern-detail-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.pattern-detail-meta h3 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.pattern-detail-meta > p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.pd-badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pattern-detail-body {
+    padding: 14px 16px 0;
+}
+
+.pd-section {
+    margin-bottom: 14px;
+}
+
+.pd-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.pd-section p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+}
+
+.pd-section ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pd-section ul li {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--accent);
+}
+
+/* 空状态 */
+.patterns-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
 }

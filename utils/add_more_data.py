@@ -11,7 +11,7 @@ import sqlite3
 import akshare as ak
 import pandas as pd
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stock_data.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'stock_data.db')
 
 # 完整股票池（扩充到25只，覆盖更多行业和风格）
 STOCK_POOL = [

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * K线大师 - 前端应用逻辑
  * 管理视图切换、API调用、ECharts图表渲染、游戏流程
  */
@@ -290,7 +290,7 @@ async function startNewGame() {
 /** 恢复进行中的游戏 */
 async function resumeGame(gameId) {
     try {
-        const res = await api('/api/game/state', { game_id: gameId });
+        const res = await api('/api/game/state', { game_id: gameId, user_id: state.user?.id });
         state.gameId = res.game_id;
         state.scenarioId = res.scenario_id;
         state.scenarioName = res.scenario_name;
@@ -303,8 +303,6 @@ async function resumeGame(gameId) {
         state.sector = res.sector || '';
         state.marketData = res.market_data || null;
         state.sectorData = res.sector_data || null;
-        state.financialInfo = res.financial_info || null;
-        state.newsItems = res.news_items || [];
         state.legendSelected = {};
         // 恢复已有交易记录
         state.trades = (res.trades || []).map(t => ({
@@ -317,7 +315,6 @@ async function resumeGame(gameId) {
         showView('view-game');
         initChart();
         updateGameUI();
-        renderNewsPanel();
     } catch (e) {
         showToast(e.message);
     }
@@ -326,13 +323,11 @@ async function resumeGame(gameId) {
 /** 推进到下一天 */
 async function handleNextDay() {
     try {
-        const res = await api('/api/game/next_day', { game_id: state.gameId });
+        const res = await api('/api/game/next_day', { game_id: state.gameId, user_id: state.user?.id });
 
         if (res.status === 'finished') {
             // 游戏结束
             state.klineData = res.kline_data;
-            state.financialInfo = res.financial_info || null;
-            state.newsItems = res.news_items || [];
             updateChart();
             showGameResult(res);
             return;
@@ -346,140 +341,11 @@ async function handleNextDay() {
         state.scenarioName = res.scenario_name;
         state.marketData = res.market_data || null;
         state.sectorData = res.sector_data || null;
-        state.financialInfo = res.financial_info || null;
-        state.newsItems = res.news_items || [];
 
         updateChart();
         updateGameUI();
-        renderNewsPanel();
     } catch (e) {
         showToast(e.message);
-    }
-}
-
-/** 渲染资讯面板（财报快照 + 新闻列表） */
-function renderNewsPanel() {
-    const panel = document.getElementById('news-panel');
-    const badge = document.getElementById('news-badge');
-    const finSnapshot = document.getElementById('fin-snapshot');
-    const finGrid = document.getElementById('fin-grid');
-    const newsList = document.getElementById('news-list');
-    const newsDivider = document.getElementById('news-divider');
-
-    if (!panel) return;
-
-    const hasFinInfo = state.financialInfo && Object.keys(state.financialInfo).length > 0;
-    const newsItems = state.newsItems || [];
-    const newsCount = newsItems.length;
-
-    // 没有任何数据时隐藏面板
-    if (!hasFinInfo && newsCount === 0) {
-        panel.style.display = 'none';
-        return;
-    }
-    panel.style.display = 'block';
-
-    // 关闭展开状态（每次更新重置）
-    const content = document.getElementById('news-content');
-    const arrow = document.getElementById('news-arrow');
-    const backdrop = document.getElementById('news-backdrop');
-    if (content) content.classList.remove('open');
-    if (arrow) arrow.classList.remove('open');
-    if (backdrop) backdrop.classList.remove('open');
-
-    // 更新徽章
-    if (badge) {
-        const total = newsCount + (hasFinInfo ? 1 : 0);
-        badge.textContent = total;
-        badge.style.display = total > 0 ? 'inline-block' : 'none';
-    }
-
-    // 渲染财报快照
-    if (hasFinInfo && finSnapshot && finGrid) {
-        const fi = state.financialInfo;
-        finSnapshot.style.display = 'block';
-
-        const finDate = document.getElementById('fin-date');
-        if (finDate && fi.report_date) {
-            finDate.textContent = fi.report_date;
-        }
-
-        // 格式化亿元
-        const toYi = (val) => {
-            if (val === null || val === undefined || val === '') return '--';
-            const num = parseFloat(val);
-            if (isNaN(num)) return '--';
-            return (num / 100000000).toFixed(2) + '亿';
-        };
-
-        // 格式化百分比
-        const toPct = (val) => {
-            if (val === null || val === undefined || val === '') return '--';
-            const num = parseFloat(val);
-            if (isNaN(num)) return '--';
-            return num.toFixed(2) + '%';
-        };
-
-        // 值的颜色类名
-        const valClass = (val) => {
-            if (val === null || val === undefined || val === '') return '';
-            const num = parseFloat(val);
-            if (isNaN(num)) return '';
-            return num > 0 ? 'positive' : num < 0 ? 'negative' : '';
-        };
-
-        // 核心指标（紧凑 3×2 布局）
-        const metrics = [
-            { label: 'ROE', value: toPct(fi.roe), cls: valClass(fi.roe) },
-            { label: '净利率', value: toPct(fi.net_margin), cls: valClass(fi.net_margin) },
-            { label: '毛利率', value: toPct(fi.gross_margin), cls: valClass(fi.gross_margin) },
-            { label: '营收增长', value: toPct(fi.revenue_growth), cls: valClass(fi.revenue_growth) },
-            { label: '利润增长', value: toPct(fi.profit_growth), cls: valClass(fi.profit_growth) },
-            { label: '负债率', value: toPct(fi.asset_liability_ratio), cls: '' },
-        ];
-
-        // 有营收/净利润则追加
-        if (fi.revenue) {
-            metrics.push({ label: '营收', value: toYi(fi.revenue), cls: '' });
-        }
-        if (fi.net_profit) {
-            metrics.push({ label: '净利润', value: toYi(fi.net_profit), cls: valClass(fi.net_profit) });
-        }
-
-        finGrid.innerHTML = metrics.map(m => `
-            <div class="fin-cell">
-                <span class="fin-cell-label">${m.label}</span>
-                <span class="fin-cell-value ${m.cls}">${m.value}</span>
-            </div>
-        `).join('');
-    } else if (finSnapshot) {
-        finSnapshot.style.display = 'none';
-    }
-
-    // 新闻分隔线（有财报且有新闻时显示）
-    if (newsDivider) {
-        newsDivider.style.display = (hasFinInfo && newsCount > 0) ? 'flex' : 'none';
-    }
-
-    // 渲染新闻列表
-    if (newsList) {
-        if (newsCount === 0) {
-            newsList.innerHTML = '';
-        } else {
-            newsList.innerHTML = newsItems.map(item => {
-                const isImportant = item.importance === 'important';
-                const text = item.text || '';
-                const itemDate = item.date || '';
-                const shortDate = itemDate.length >= 10 ? itemDate.substring(5, 10) : itemDate;
-                return `
-                    <div class="news-item${isImportant ? ' important' : ''}">
-                        <span class="news-date">${shortDate}</span>
-                        <span class="news-dot${isImportant ? ' important' : ''}"></span>
-                        <span class="news-text">${text}</span>
-                    </div>
-                `;
-            }).join('');
-        }
     }
 }
 
@@ -667,6 +533,7 @@ async function executeTrade() {
     try {
         const res = await api('/api/game/trade', {
             game_id: state.gameId,
+            user_id: state.user?.id,
             action: state.tradeAction,
             percentage: state.tradePct
         });
@@ -777,10 +644,10 @@ function updateChart() {
             xAxisIndex: 0,
             yAxisIndex: 0,
             itemStyle: {
-                color: '#ef4444',
-                color0: '#22c55e',
-                borderColor: '#ef4444',
-                borderColor0: '#22c55e',
+                color: '#f04444',
+                color0: '#1ec870',
+                borderColor: '#f04444',
+                borderColor0: '#1ec870',
                 borderWidth: 1
             },
             barWidth: state.klineData.length > 35 ? '50%' : '60%'
@@ -841,8 +708,8 @@ function updateChart() {
             yAxisIndex: 0,
             smooth: true,
             symbol: 'none',
-            itemStyle: { color: '#3b82f6' },
-            lineStyle: { color: '#3b82f6', width: 1, opacity: 0.8 },
+            itemStyle: { color: '#4890f8' },
+            lineStyle: { color: '#4890f8', width: 1, opacity: 0.8 },
             z: 2
         },
         {
@@ -853,8 +720,8 @@ function updateChart() {
             yAxisIndex: 0,
             smooth: true,
             symbol: 'none',
-            itemStyle: { color: '#a855f7' },
-            lineStyle: { color: '#a855f7', width: 1, opacity: 0.8 },
+            itemStyle: { color: '#a060f0' },
+            lineStyle: { color: '#a060f0', width: 1, opacity: 0.8 },
             z: 2
         }
     );
@@ -932,7 +799,7 @@ function updateChart() {
         const macdData = calcMACD(closes);
         series.push(
             { name: 'DIF', type: 'line', data: macdData.dif, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#f59e0b', width: 1 }, z: 3 },
-            { name: 'DEA', type: 'line', data: macdData.dea, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#3b82f6', width: 1 }, z: 3 },
+            { name: 'DEA', type: 'line', data: macdData.dea, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#4890f8', width: 1 }, z: 3 },
             { name: 'MACD', type: 'bar', data: macdData.macd.map(v => ({
                 value: v,
                 itemStyle: { color: v !== null && v >= 0 ? 'rgba(239,68,68,0.6)' : 'rgba(34,197,94,0.6)' }
@@ -944,8 +811,8 @@ function updateChart() {
         const kdjData = calcKDJ(data);
         series.push(
             { name: 'K', type: 'line', data: kdjData.k, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#f59e0b', width: 1 }, z: 3 },
-            { name: 'D', type: 'line', data: kdjData.d, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#3b82f6', width: 1 }, z: 3 },
-            { name: 'J', type: 'line', data: kdjData.j, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#a855f7', width: 1 }, z: 3 }
+            { name: 'D', type: 'line', data: kdjData.d, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#4890f8', width: 1 }, z: 3 },
+            { name: 'J', type: 'line', data: kdjData.j, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#a060f0', width: 1 }, z: 3 }
         );
         legendData.push('K', 'D', 'J');
     } else if (subMode === 'trix') {
@@ -953,7 +820,7 @@ function updateChart() {
         const trixData = calcTRIX(closes);
         series.push(
             { name: 'TRIX', type: 'line', data: trixData.trix, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#f59e0b', width: 1 }, z: 3 },
-            { name: 'MATRIX', type: 'line', data: trixData.matrix, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#3b82f6', width: 1 }, z: 3 }
+            { name: 'MATRIX', type: 'line', data: trixData.matrix, xAxisIndex: 1, yAxisIndex: 1, symbol: 'none', lineStyle: { color: '#4890f8', width: 1 }, z: 3 }
         );
         legendData.push('TRIX', 'MATRIX');
     }
@@ -1004,8 +871,8 @@ function updateChart() {
                 name: '买入', type: 'scatter', data: buyPts,
                 xAxisIndex: 0, yAxisIndex: 0,
                 symbol: 'circle', symbolSize: 6, symbolOffset: [0, 8],
-                itemStyle: { color: '#ef4444' },
-                label: { show: true, position: 'bottom', formatter: 'B', color: '#ef4444', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
+                itemStyle: { color: '#f04444' },
+                label: { show: true, position: 'bottom', formatter: 'B', color: '#f04444', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
                 z: 20
             });
         }
@@ -1014,8 +881,8 @@ function updateChart() {
                 name: '卖出', type: 'scatter', data: sellPts,
                 xAxisIndex: 0, yAxisIndex: 0,
                 symbol: 'circle', symbolSize: 6, symbolOffset: [0, -8],
-                itemStyle: { color: '#3b82f6' },
-                label: { show: true, position: 'top', formatter: 'S', color: '#3b82f6', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
+                itemStyle: { color: '#4890f8' },
+                label: { show: true, position: 'top', formatter: 'S', color: '#4890f8', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
                 z: 20
             });
         }
@@ -1034,8 +901,8 @@ function updateChart() {
                 type: 'cross',
                 crossStyle: { color: '#666' }
             },
-            backgroundColor: 'rgba(20, 25, 35, 0.95)',
-            borderColor: '#2a3347',
+            backgroundColor: 'rgba(12, 20, 32, 0.96)',
+            borderColor: '#162034',
             textStyle: { color: '#e8ecf1', fontSize: 12 },
             formatter: function(params) {
                 if (!params || !params.length) return '';
@@ -1043,10 +910,10 @@ function updateChart() {
                 const d = data[dayIdx];
                 let html = `<div style="font-size:11px;color:#8892a4;margin-bottom:4px;">Day ${dayIdx + 1}</div>`;
                 html += `<div style="font-family:JetBrains Mono,monospace;font-size:12px;">`;
-                html += `开: <span style="color:${d.close >= d.open ? '#ef4444' : '#22c55e'}">${d.open.toFixed(2)}</span><br>`;
-                html += `高: <span style="color:#ef4444">${d.high.toFixed(2)}</span><br>`;
-                html += `低: <span style="color:#22c55e">${d.low.toFixed(2)}</span><br>`;
-                html += `收: <span style="color:${d.close >= d.open ? '#ef4444' : '#22c55e'};font-weight:700">${d.close.toFixed(2)}</span><br>`;
+                html += `开: <span style="color:${d.close >= d.open ? '#f04444' : '#1ec870'}">${d.open.toFixed(2)}</span><br>`;
+                html += `高: <span style="color:#f04444">${d.high.toFixed(2)}</span><br>`;
+                html += `低: <span style="color:#1ec870">${d.low.toFixed(2)}</span><br>`;
+                html += `收: <span style="color:${d.close >= d.open ? '#f04444' : '#1ec870'};font-weight:700">${d.close.toFixed(2)}</span><br>`;
                 html += `量: ${(d.volume / 10000).toFixed(1)}万`;
                 html += `</div>`;
                 return html;
@@ -1303,7 +1170,7 @@ function renderPKChart(sceneData, playersData) {
     // K线
     series.push({
         name: 'K线', type: 'candlestick', data: ohlcData,
-        itemStyle: { color: '#ef4444', color0: '#22c55e', borderColor: '#ef4444', borderColor0: '#22c55e', borderWidth: 1 },
+        itemStyle: { color: '#f04444', color0: '#1ec870', borderColor: '#f04444', borderColor0: '#1ec870', borderWidth: 1 },
         barWidth: '50%',
         markLine: {
             silent: true, symbol: 'none',
@@ -1603,8 +1470,8 @@ function renderDetailChart(data) {
         type: 'candlestick',
         data: ohlcData,
         itemStyle: {
-            color: '#ef4444', color0: '#22c55e',
-            borderColor: '#ef4444', borderColor0: '#22c55e', borderWidth: 1
+            color: '#f04444', color0: '#1ec870',
+            borderColor: '#f04444', borderColor0: '#1ec870', borderWidth: 1
         },
         barWidth: '50%'
     });
@@ -1612,8 +1479,8 @@ function renderDetailChart(data) {
     // MA
     series.push(
         { name: 'MA5', type: 'line', data: ma5, smooth: true, symbol: 'none', itemStyle: { color: '#f59e0b' }, lineStyle: { color: '#f59e0b', width: 1, opacity: 0.8 }, z: 2 },
-        { name: 'MA10', type: 'line', data: ma10, smooth: true, symbol: 'none', itemStyle: { color: '#3b82f6' }, lineStyle: { color: '#3b82f6', width: 1, opacity: 0.8 }, z: 2 },
-        { name: 'MA20', type: 'line', data: ma20, smooth: true, symbol: 'none', itemStyle: { color: '#a855f7' }, lineStyle: { color: '#a855f7', width: 1, opacity: 0.8 }, z: 2 }
+        { name: 'MA10', type: 'line', data: ma10, smooth: true, symbol: 'none', itemStyle: { color: '#4890f8' }, lineStyle: { color: '#4890f8', width: 1, opacity: 0.8 }, z: 2 },
+        { name: 'MA20', type: 'line', data: ma20, smooth: true, symbol: 'none', itemStyle: { color: '#a060f0' }, lineStyle: { color: '#a060f0', width: 1, opacity: 0.8 }, z: 2 }
     );
 
     // 上证指数叠加
@@ -1670,8 +1537,8 @@ function renderDetailChart(data) {
             series.push({
                 name: '买入', type: 'scatter', data: buyPts,
                 symbol: 'circle', symbolSize: 6, symbolOffset: [0, 8],
-                itemStyle: { color: '#ef4444' },
-                label: { show: true, position: 'bottom', formatter: 'B', color: '#ef4444', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
+                itemStyle: { color: '#f04444' },
+                label: { show: true, position: 'bottom', formatter: 'B', color: '#f04444', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
                 z: 20
             });
         }
@@ -1679,8 +1546,8 @@ function renderDetailChart(data) {
             series.push({
                 name: '卖出', type: 'scatter', data: sellPts,
                 symbol: 'circle', symbolSize: 6, symbolOffset: [0, -8],
-                itemStyle: { color: '#3b82f6' },
-                label: { show: true, position: 'top', formatter: 'S', color: '#3b82f6', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
+                itemStyle: { color: '#4890f8' },
+                label: { show: true, position: 'top', formatter: 'S', color: '#4890f8', fontSize: 8, fontWeight: 700, distance: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowBlur: 2 },
                 z: 20
             });
         }
@@ -1716,6 +1583,538 @@ function renderDetailChart(data) {
     window.addEventListener('resize', () => detailChart.resize());
 }
 
+// ========== K线图鉴数据 ==========
+
+const KLINE_PATTERNS = [
+    // ---- 单根K线 ----
+    {
+        id: 'big-yang', name: '大阳线', engName: 'Bullish Marubozu',
+        category: 'single', signal: 'bullish',
+        candles: [{ o: 30, h: 73, l: 27, c: 70 }],
+        description: '开盘价接近最低价，收盘价接近最高价，实体很长，上下影线极短或无。是多头力量极为强劲的信号。',
+        note: '出现在下跌趋势末端或突破时，往往预示行情反转向上；出现在上涨途中，则是趋势延续信号。',
+        rules: ['实体长度占K线总高度70%以上', '上下影线极短（影线/实体 < 10%）', '收盘价接近全天最高价']
+    },
+    {
+        id: 'big-yin', name: '大阴线', engName: 'Bearish Marubozu',
+        category: 'single', signal: 'bearish',
+        candles: [{ o: 70, h: 73, l: 27, c: 30 }],
+        description: '开盘价接近最高价，收盘价接近最低价，实体很长，上下影线极短或无。是空头力量极为强劲的信号。',
+        note: '出现在上涨趋势末端，往往是趋势反转的信号；若在跌势中出现，则代表下跌加速。',
+        rules: ['实体长度占K线总高度70%以上', '上下影线极短', '收盘价接近全天最低价']
+    },
+    {
+        id: 'hammer', name: '锤子线', engName: 'Hammer',
+        category: 'single', signal: 'bullish',
+        candles: [{ o: 65, h: 68, l: 30, c: 67 }],
+        description: '实体小，位于K线上部；下影线很长（至少是实体的2倍），上影线极短或无。如同一把锤子，象征多头把价格从低位锤回。',
+        note: '必须出现在下跌趋势末端才有效。下影线越长，反转信号越强。次日出现阳线可确认。',
+        rules: ['必须在下跌趋势中出现', '下影线 ≥ 实体的2倍', '上影线极短或无', '实体颜色不限，阳线更佳']
+    },
+    {
+        id: 'hanging-man', name: '上吊线', engName: 'Hanging Man',
+        category: 'single', signal: 'bearish',
+        candles: [{ o: 65, h: 68, l: 30, c: 67 }],
+        description: '外形与锤子线相同，但出现在上涨趋势末端。价格高开，盘中一度大幅下跌，虽收回但下影线很长，暗示多头已现疲态。',
+        note: '出现后若次日开盘低于上吊线实体，则反转信号得到确认。成交量越大，信号越可靠。',
+        rules: ['必须在上涨趋势末端出现', '下影线 ≥ 实体的2倍', '上影线极短或无', '次日确认下跌更有效']
+    },
+    {
+        id: 'shooting-star', name: '射击之星', engName: 'Shooting Star',
+        category: 'single', signal: 'bearish',
+        candles: [{ o: 36, h: 72, l: 33, c: 38 }],
+        description: '实体小，位于K线下部；上影线很长（至少是实体的2倍），下影线极短或无。价格大幅冲高后被空头强力压回，多头失守。',
+        note: '出现在上涨趋势末端，是常见的顶部反转信号。实体越小、上影线越长，信号越强。',
+        rules: ['必须在上涨趋势末端出现', '上影线 ≥ 实体的2倍', '下影线极短或无', '实体位于K线下部']
+    },
+    {
+        id: 'inverted-hammer', name: '倒锤子线', engName: 'Inverted Hammer',
+        category: 'single', signal: 'bullish',
+        candles: [{ o: 36, h: 72, l: 33, c: 38 }],
+        description: '外形与射击之星相同，但出现在下跌趋势末端。多头试图推动价格上涨，虽未守住高位，但预示多头力量正在积聚。',
+        note: '需要次日阳线确认。单独出现意义不大，结合成交量放大更可靠。',
+        rules: ['必须在下跌趋势末端出现', '上影线 ≥ 实体的2倍', '下影线极短或无', '需次日阳线确认']
+    },
+    {
+        id: 'doji', name: '十字星', engName: 'Doji',
+        category: 'single', signal: 'neutral',
+        candles: [{ o: 50, h: 72, l: 28, c: 50 }],
+        description: '开盘价与收盘价几乎相等，实体极小甚至为一条线，上下影线均存在。代表多空力量的极度平衡与市场犹豫。',
+        note: '在上涨趋势顶部出现可能预示反转；在下跌趋势底部出现可能预示反转。需结合趋势背景判断。',
+        rules: ['开收盘价差极小（< 价格范围的5%）', '上下均有影线', '需结合趋势背景才有意义']
+    },
+    {
+        id: 'gravestone-doji', name: '墓碑十字', engName: 'Gravestone Doji',
+        category: 'single', signal: 'bearish',
+        candles: [{ o: 30, h: 72, l: 29, c: 30 }],
+        description: '开盘价、收盘价与最低价几乎相同，只有很长的上影线。形如墓碑，象征多头的最后一搏被彻底压垮。',
+        note: '在上涨趋势末端出现，是非常强烈的顶部反转信号。上影线越长，信号越强。',
+        rules: ['开盘、收盘、最低价几乎相同', '上影线极长', '无下影线或极短', '出现在上涨趋势末端']
+    },
+    {
+        id: 'dragonfly-doji', name: '蜻蜓十字', engName: 'Dragonfly Doji',
+        category: 'single', signal: 'bullish',
+        candles: [{ o: 71, h: 72, l: 28, c: 71 }],
+        description: '开盘价、收盘价与最高价几乎相同，只有很长的下影线。形如蜻蜓，象征空头被多头在低位全力拉回。',
+        note: '在下跌趋势末端出现，是强烈的底部反转信号。下影线越长，买盘越强劲。',
+        rules: ['开盘、收盘、最高价几乎相同', '下影线极长', '无上影线或极短', '出现在下跌趋势末端']
+    },
+    {
+        id: 'spinning-top', name: '纺锤线', engName: 'Spinning Top',
+        category: 'single', signal: 'neutral',
+        candles: [{ o: 48, h: 68, l: 32, c: 52 }],
+        description: '实体较小，上下影线均较长且大致相等。多空双方均有一定作为，但谁也无法占据明显优势，市场方向不明。',
+        note: '在趋势末期出现，可能预示趋势即将反转或进入盘整。需结合前后K线判断。',
+        rules: ['实体短小', '上下影线均较长', '影线长度大致相近', '代表多空均衡状态']
+    },
+    // ---- 双根K线 ----
+    {
+        id: 'bullish-engulfing', name: '看涨吞噬', engName: 'Bullish Engulfing',
+        category: 'double', signal: 'bullish',
+        candles: [{ o: 58, h: 61, l: 40, c: 44 }, { o: 38, h: 70, l: 35, c: 67 }],
+        description: '第一根为阴线，第二根为阳线，且阳线实体完全包住（吞噬）阴线实体。阳线开盘低于阴线收盘，但收盘高于阴线开盘。',
+        note: '出现在下跌趋势末端，是强力看涨反转信号。吞噬幅度越大，信号越强。成交量放大效果更佳。',
+        rules: ['需出现在下跌趋势中', '第二根阳线实体须完全吞噬第一根阴线实体', '第二根成交量应大于第一根']
+    },
+    {
+        id: 'bearish-engulfing', name: '看跌吞噬', engName: 'Bearish Engulfing',
+        category: 'double', signal: 'bearish',
+        candles: [{ o: 42, h: 62, l: 39, c: 58 }, { o: 63, h: 65, l: 30, c: 34 }],
+        description: '第一根为阳线，第二根为阴线，且阴线实体完全包住（吞噬）阳线实体。阴线开盘高于阳线收盘，但收盘低于阳线开盘。',
+        note: '出现在上涨趋势末端，是强力看跌反转信号。是预判顶部的重要信号之一。',
+        rules: ['需出现在上涨趋势中', '第二根阴线实体须完全吞噬第一根阳线实体', '成交量放大更可靠']
+    },
+    {
+        id: 'bullish-harami', name: '看涨孕线', engName: 'Bullish Harami',
+        category: 'double', signal: 'bullish',
+        candles: [{ o: 65, h: 67, l: 30, c: 33 }, { o: 40, h: 58, l: 37, c: 54 }],
+        description: '第一根为长阴线，第二根为短阳线，且第二根实体完全在第一根实体范围之内（孕于其中）。名称来自日语"母子"。',
+        note: '出现在下跌趋势中，提示趋势可能放缓。信号较弱，需次日阳线确认。',
+        rules: ['出现在下跌趋势中', '第二根小阳线须在第一根阴线实体内', '第二根成交量通常较小']
+    },
+    {
+        id: 'bearish-harami', name: '看跌孕线', engName: 'Bearish Harami',
+        category: 'double', signal: 'bearish',
+        candles: [{ o: 35, h: 68, l: 32, c: 65 }, { o: 52, h: 62, l: 42, c: 47 }],
+        description: '第一根为长阳线，第二根为短阴线，且第二根实体完全在第一根实体范围之内。预示上涨势头减弱。',
+        note: '出现在上涨趋势末端，是潜在的顶部反转信号。需配合其他指标确认。',
+        rules: ['出现在上涨趋势中', '第二根小阴线须在第一根阳线实体内', '若第二根为十字星则信号更强']
+    },
+    {
+        id: 'piercing', name: '刺穿形态', engName: 'Piercing Pattern',
+        category: 'double', signal: 'bullish',
+        candles: [{ o: 65, h: 67, l: 30, c: 34 }, { o: 27, h: 58, l: 24, c: 55 }],
+        description: '第一根为阴线，第二根阳线低开（低于第一根最低价），但收盘价超过第一根实体的中点以上。多头在低位强力反击。',
+        note: '出现在下跌趋势末端，是看涨反转信号。阳线穿入阴线实体越深，信号越强。',
+        rules: ['第二根须跳空低开', '收盘须高于第一根阴线实体的中点', '出现在下跌趋势末端']
+    },
+    {
+        id: 'dark-cloud', name: '乌云压顶', engName: 'Dark Cloud Cover',
+        category: 'double', signal: 'bearish',
+        candles: [{ o: 35, h: 68, l: 32, c: 65 }, { o: 72, h: 74, l: 42, c: 45 }],
+        description: '第一根为阳线，第二根阴线高开（高于第一根最高价），但收盘价跌入第一根实体的中点以下。空头从高位大力压制。',
+        note: '出现在上涨趋势末端，是强烈的看跌反转信号。与刺穿形态互为镜像。',
+        rules: ['第二根须跳空高开', '收盘须低于第一根阳线实体的中点', '出现在上涨趋势末端']
+    },
+    {
+        id: 'tweezers-top', name: '平头顶部', engName: 'Tweezers Top',
+        category: 'double', signal: 'bearish',
+        candles: [{ o: 45, h: 70, l: 42, c: 65 }, { o: 65, h: 70, l: 38, c: 42 }],
+        description: '两根K线的最高价（或收盘价）完全相同，形成双重阻力。第二根无法突破前一日高点，显示上方阻力极强。',
+        note: '在上涨趋势末端出现，有效提示阻力位。结合其他反转形态信号更强。',
+        rules: ['两根K线最高价相同', '出现在上涨趋势末端', '成交量配合下降时更有效']
+    },
+    {
+        id: 'tweezers-bottom', name: '平头底部', engName: 'Tweezers Bottom',
+        category: 'double', signal: 'bullish',
+        candles: [{ o: 55, h: 58, l: 30, c: 35 }, { o: 35, h: 62, l: 30, c: 58 }],
+        description: '两根K线的最低价完全相同，形成双重支撑。第二根无法跌破前一日低点，显示下方支撑极为坚固。',
+        note: '在下跌趋势末端出现，有效提示支撑位。常与其他底部形态组合出现。',
+        rules: ['两根K线最低价相同', '出现在下跌趋势末端', '第二根为阳线时信号更强']
+    },
+    // ---- 三根K线 ----
+    {
+        id: 'three-white-soldiers', name: '红三兵', engName: 'Three White Soldiers',
+        category: 'triple', signal: 'bullish',
+        candles: [
+            { o: 30, h: 52, l: 28, c: 50 },
+            { o: 48, h: 65, l: 46, c: 63 },
+            { o: 61, h: 78, l: 59, c: 76 }
+        ],
+        description: '连续三根实体较长的阳线，每根都在前一根实体内开盘，收盘依次升高。每根K线的上影线很短甚至没有。',
+        note: '出现在下跌趋势末端或盘整突破后，是极强的多头信号。若在高位出现，要警惕过度延伸的风险。',
+        rules: ['三根均为阳线且实体较长', '每根在前一根实体内开盘', '收盘价依次创新高', '上影线极短']
+    },
+    {
+        id: 'three-black-crows', name: '三只乌鸦', engName: 'Three Black Crows',
+        category: 'triple', signal: 'bearish',
+        candles: [
+            { o: 70, h: 72, l: 50, c: 52 },
+            { o: 54, h: 56, l: 36, c: 38 },
+            { o: 40, h: 42, l: 22, c: 24 }
+        ],
+        description: '连续三根实体较长的阴线，每根都在前一根实体内开盘，收盘依次走低。形如三只乌鸦展翅，预兆不祥。',
+        note: '出现在上涨趋势末端或高位，是极强的空头信号。成交量逐日放大时信号更强。',
+        rules: ['三根均为阴线且实体较长', '每根在前一根实体内开盘', '收盘价依次创新低', '下影线极短']
+    },
+    {
+        id: 'morning-star', name: '早晨之星', engName: 'Morning Star',
+        category: 'triple', signal: 'bullish',
+        candles: [
+            { o: 65, h: 67, l: 35, c: 40 },
+            { o: 38, h: 42, l: 28, c: 34 },
+            { o: 36, h: 68, l: 34, c: 65 }
+        ],
+        description: '第一根为长阴线，第二根为小实体K线（可阴可阳）且通常跳空低开，第三根为长阳线且收盘深入第一根实体内。如黎明前的晨星，预示黑暗即将结束。',
+        note: '出现在下跌趋势末端，是经典的底部反转信号。第三根阳线收复第一根阴线实体越多，信号越强。',
+        rules: ['第一根为长阴线', '第二根实体小，且低于第一根实体', '第三根阳线收复第一根实体一半以上']
+    },
+    {
+        id: 'evening-star', name: '黄昏之星', engName: 'Evening Star',
+        category: 'triple', signal: 'bearish',
+        candles: [
+            { o: 35, h: 62, l: 33, c: 58 },
+            { o: 60, h: 68, l: 57, c: 63 },
+            { o: 61, h: 63, l: 33, c: 37 }
+        ],
+        description: '第一根为长阳线，第二根为小实体K线且跳空高开，第三根为长阴线且收盘深入第一根实体内。如黄昏将至，预示上涨行情即将终结。',
+        note: '出现在上涨趋势末端，是经典的顶部反转信号。与早晨之星互为镜像，同样可靠。',
+        rules: ['第一根为长阳线', '第二根实体小，且高于第一根实体', '第三根阴线跌入第一根实体一半以上']
+    },
+    {
+        id: 'morning-doji-star', name: '早晨十字星', engName: 'Morning Doji Star',
+        category: 'triple', signal: 'bullish',
+        candles: [
+            { o: 65, h: 67, l: 33, c: 38 },
+            { o: 36, h: 39, l: 27, c: 36 },
+            { o: 40, h: 70, l: 38, c: 67 }
+        ],
+        description: '早晨之星的增强版，第二根为十字星。十字星代表极度犹豫，结合前后的长阴线和长阳线，反转信号极为强烈。',
+        note: '比普通早晨之星更可靠，是非常有价值的底部信号。机构往往在此大量建仓。',
+        rules: ['第二根必须为十字星', '十字星跳空低于第一根阴线实体', '第三根阳线大幅回升，越过第一根实体中点']
+    },
+    {
+        id: 'evening-doji-star', name: '黄昏十字星', engName: 'Evening Doji Star',
+        category: 'triple', signal: 'bearish',
+        candles: [
+            { o: 35, h: 65, l: 33, c: 60 },
+            { o: 62, h: 68, l: 60, c: 62 },
+            { o: 65, h: 67, l: 33, c: 38 }
+        ],
+        description: '黄昏之星的增强版，第二根为十字星。是顶部反转中最强烈的信号之一，十字星代表多空力量极度撕裂后的反转。',
+        note: '可靠性极高的顶部信号。出现后若配合成交量缩量，说明做多意愿已消退，下跌概率极大。',
+        rules: ['第二根必须为十字星', '十字星跳空高于第一根阳线实体', '第三根阴线大幅回落，越过第一根实体中点']
+    },
+    {
+        id: 'rising-three', name: '上升三法', engName: 'Rising Three Methods',
+        category: 'triple', signal: 'continuation',
+        candles: [
+            { o: 28, h: 74, l: 26, c: 70 },
+            { o: 66, h: 72, l: 52, c: 56 },
+            { o: 56, h: 65, l: 50, c: 54 },
+            { o: 55, h: 62, l: 48, c: 52 },
+            { o: 50, h: 82, l: 48, c: 79 }
+        ],
+        description: '第一根长阳线后跟随三根下跌的小K线（均在第一根实体内），最后一根长阳线突破前期高点。代表短暂调整后趋势延续。',
+        note: '出现在上涨途中，表明主力在调整期间依然控盘。最后一根阳线确认突破后可以加仓。',
+        rules: ['第一根为长阳线', '中间3根小K线在第一根范围内震荡', '最后一根阳线突破第一根高点', '整体处于上升趋势中']
+    },
+    {
+        id: 'falling-three', name: '下降三法', engName: 'Falling Three Methods',
+        category: 'triple', signal: 'continuation',
+        candles: [
+            { o: 72, h: 74, l: 28, c: 32 },
+            { o: 34, h: 48, l: 30, c: 44 },
+            { o: 42, h: 52, l: 38, c: 48 },
+            { o: 46, h: 54, l: 40, c: 43 },
+            { o: 50, h: 52, l: 20, c: 25 }
+        ],
+        description: '第一根长阴线后跟随三根上涨的小K线（均在第一根实体内），最后一根长阴线跌破前期低点。代表短暂反弹后继续下跌。',
+        note: '出现在下跌途中，表明空头依然强势。最后一根阴线确认后可考虑做空或清仓。',
+        rules: ['第一根为长阴线', '中间3根小K线在第一根范围内反弹', '最后一根阴线跌破第一根低点', '整体处于下降趋势中']
+    },
+    // ---- 趋势形态（多根K线，折线轮廓）----
+    {
+        id: 'double-top', name: '双顶（M顶）', engName: 'Double Top',
+        category: 'multi', signal: 'bearish',
+        trendLine: [20, 10, 25, 10, 30, 40, 35, 25, 40, 10, 45, 10, 50, 40, 55, 68, 60, 65, 65, 68, 70, 65, 75, 68, 80, 55, 85, 35, 90, 20],
+        description: '价格上涨到某一高点，回落后再次上涨到相近高点，随后无法突破并下跌。两个高点连成"M"形，颈线为两者之间的低点。',
+        note: '颈线被有效跌破后，下跌目标约等于顶部到颈线的距离。颈线突破时成交量放大是关键确认信号。',
+        rules: ['两个高点高度相近（差距<3%）', '颈线被明确跌破才确认形态', '第二个高点成交量通常低于第一个', '颈线突破后可能回踩确认']
+    },
+    {
+        id: 'double-bottom', name: '双底（W底）', engName: 'Double Bottom',
+        category: 'multi', signal: 'bullish',
+        trendLine: [20, 78, 25, 78, 30, 48, 35, 65, 40, 78, 45, 78, 50, 48, 55, 28, 60, 32, 65, 28, 70, 32, 75, 45, 80, 62, 85, 72, 90, 78],
+        description: '价格下跌到某一低点，反弹后再次下跌到相近低点，随后无法跌破并上涨。两个低点连成"W"形，颈线为两者之间的高点。',
+        note: '颈线被有效突破后，上涨目标约等于底部到颈线的距离。是常见的底部反转信号，可靠性较高。',
+        rules: ['两个低点深度相近', '颈线被有效突破才确认形态', '第二个低点成交量通常低于第一个', '颈线突破后成交量应放大']
+    },
+    {
+        id: 'head-shoulders', name: '头肩顶', engName: 'Head & Shoulders Top',
+        category: 'multi', signal: 'bearish',
+        trendLine: [15, 60, 20, 50, 25, 30, 30, 15, 35, 30, 40, 45, 45, 50, 50, 20, 55, 10, 60, 20, 65, 40, 70, 45, 75, 35, 80, 50, 85, 68, 90, 78],
+        description: '由左肩（较小高点）、头部（最高高点）、右肩（较小高点）组成，颈线连接两个低点。是技术分析中最经典的顶部反转形态。',
+        note: '颈线被跌破时，下跌目标等于头部到颈线的距离。跌破颈线后可能回踩，是确认后的卖出时机。',
+        rules: ['头部高于两肩', '两肩高度大致相当', '颈线跌破时成交量应明显放大', '右肩成交量通常低于左肩']
+    },
+    {
+        id: 'inv-head-shoulders', name: '头肩底', engName: 'Inverse Head & Shoulders',
+        category: 'multi', signal: 'bullish',
+        trendLine: [15, 38, 20, 48, 25, 68, 30, 82, 35, 68, 40, 53, 45, 48, 50, 78, 55, 88, 60, 78, 65, 55, 70, 53, 75, 62, 80, 48, 85, 30, 90, 20],
+        description: '头肩顶的镜像，由左肩（较小低点）、头部（最低低点）、右肩（较小低点）组成。颈线连接两个高点。',
+        note: '颈线突破时，上涨目标等于头部到颈线的距离。是下跌趋势转为上涨的可靠信号。',
+        rules: ['头部低于两肩', '两肩深度大致相当', '颈线突破时成交量放大', '右肩通常成交量较低']
+    }
+];
+
+// ========== K线图鉴 - Canvas绘制 ==========
+
+/**
+ * 绘制K线形态示意图到 canvas
+ * @param {HTMLCanvasElement} canvas
+ * @param {Object} pattern - 形态数据
+ * @param {boolean} isDetail - 是否为详情模式（较大尺寸）
+ */
+function drawPatternCanvas(canvas, pattern, isDetail = false) {
+    const ctx = canvas.getContext('2d');
+    // canvas.width/height 是物理像素，需除以 dpr 得到逻辑像素坐标
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.width / dpr;
+    const H = canvas.height / dpr;
+
+    // 清空
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#04080f';
+    ctx.fillRect(0, 0, W, H);
+
+    // 如果是折线趋势形态
+    if (pattern.trendLine) {
+        drawTrendLine(ctx, W, H, pattern.trendLine, pattern.signal);
+        return;
+    }
+
+    const candles = pattern.candles;
+    if (!candles || candles.length === 0) return;
+
+    // 找出价格范围
+    let minV = Infinity, maxV = -Infinity;
+    for (const c of candles) {
+        minV = Math.min(minV, c.l);
+        maxV = Math.max(maxV, c.h);
+    }
+    const range = maxV - minV || 1;
+
+    // 留边距
+    const padTop = H * 0.1;
+    const padBot = H * 0.1;
+    const drawH = H - padTop - padBot;
+
+    // 映射函数（价格→像素 y，价格越高 y 越小）
+    const py = v => padTop + drawH * (1 - (v - minV) / range);
+
+    // 蜡烛布局
+    const n = candles.length;
+    const totalW = W * 0.8;
+    const startX = W * 0.1;
+    const candleW = totalW / n;
+    const bodyW = Math.max(candleW * 0.55, 4);
+
+    for (let i = 0; i < n; i++) {
+        const c = candles[i];
+        const cx = startX + candleW * i + candleW / 2;
+        const isBull = c.c >= c.o;
+        const color = isBull ? '#f04444' : '#1ec870'; // A股：红涨绿跌
+
+        const bodyTop = py(Math.max(c.o, c.c));
+        const bodyBot = py(Math.min(c.o, c.c));
+        const bodyH = Math.max(bodyBot - bodyTop, 1.5);
+        const wickTop = py(c.h);
+        const wickBot = py(c.l);
+
+        // 影线
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isDetail ? 1.5 : 1;
+        ctx.moveTo(cx, wickTop);
+        ctx.lineTo(cx, bodyTop);
+        ctx.moveTo(cx, bodyBot);
+        ctx.lineTo(cx, wickBot);
+        ctx.stroke();
+
+        // 实体
+        ctx.fillStyle = color;
+        ctx.fillRect(cx - bodyW / 2, bodyTop, bodyW, bodyH);
+
+        // 十字星（开盘=收盘）：画一条横线
+        if (Math.abs(c.o - c.c) < 0.5) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = isDetail ? 2 : 1.5;
+            ctx.moveTo(cx - bodyW / 2, py(c.o));
+            ctx.lineTo(cx + bodyW / 2, py(c.o));
+            ctx.stroke();
+        }
+    }
+}
+
+/**
+ * 绘制趋势折线形态（双顶/双底/头肩等）
+ * pairs: [x0, y0, x1, y1, ...] 坐标对（归一化0-100）
+ */
+function drawTrendLine(ctx, W, H, pairs, signal) {
+    const padX = W * 0.05;
+    const padY = H * 0.1;
+    const drawW = W - padX * 2;
+    const drawH = H - padY * 2;
+
+    // 转换坐标
+    const pts = [];
+    for (let i = 0; i < pairs.length; i += 2) {
+        pts.push({
+            x: padX + (pairs[i] / 100) * drawW,
+            y: padY + (pairs[i + 1] / 100) * drawH
+        });
+    }
+
+    // 渐变颜色
+    const col = signal === 'bullish' ? '#f04444' : signal === 'bearish' ? '#1ec870' : '#f0a030';
+    const grad = ctx.createLinearGradient(0, padY, 0, H - padY);
+    grad.addColorStop(0, col + '55');
+    grad.addColorStop(1, col + '00');
+
+    // 填充区域
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, H - padY);
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, H - padY);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // 折线
+    ctx.beginPath();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+}
+
+// ========== K线图鉴 - 页面逻辑 ==========
+
+let patternFilter = { cat: 'all', signal: 'all' };
+
+function enterPatterns() {
+    showView('view-patterns');
+    renderPatternGrid();
+}
+
+function renderPatternGrid() {
+    const grid = document.getElementById('patterns-grid');
+    const filtered = KLINE_PATTERNS.filter(p => {
+        const catOk = patternFilter.cat === 'all' || p.category === patternFilter.cat;
+        const sigOk = patternFilter.signal === 'all' || p.signal === patternFilter.signal;
+        return catOk && sigOk;
+    });
+
+    document.getElementById('patterns-count').textContent = filtered.length;
+
+    if (filtered.length === 0) {
+        grid.innerHTML = '<div class="patterns-empty">暂无符合条件的形态</div>';
+        return;
+    }
+
+    grid.innerHTML = '';
+
+    const signalLabels = { bullish: '看涨', bearish: '看跌', neutral: '中性', continuation: '持续' };
+    const catLabels = { single: '单根', double: '双根', triple: '三根', multi: '趋势' };
+
+    filtered.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'pattern-card';
+        card.style.animationDelay = (idx * 0.04) + 's';
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pattern-card-canvas';
+        // 设置canvas实际分辨率（考虑dpr）
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = 160 * dpr;
+        canvas.height = 120 * dpr;
+        canvas.style.width = '100%';
+        canvas.style.height = '120px';
+        canvas.getContext('2d').scale(dpr, dpr);
+
+        card.innerHTML = `
+            <div class="pattern-card-info">
+                <div class="pattern-card-name">${p.name}</div>
+                <div class="pattern-card-engname">${p.engName}</div>
+                <div class="pattern-card-badges">
+                    <span class="signal-badge ${p.signal}">${signalLabels[p.signal] || p.signal}</span>
+                    <span class="cat-badge">${catLabels[p.category] || p.category}</span>
+                </div>
+            </div>
+        `;
+        card.prepend(canvas);
+
+        // 延迟绘制（等DOM插入后）
+        setTimeout(() => drawPatternCanvas(canvas, p), 10);
+
+        card.addEventListener('click', () => showPatternDetail(p));
+        grid.appendChild(card);
+    });
+}
+
+function showPatternDetail(p) {
+    const modal = document.getElementById('pattern-detail-modal');
+    const signalLabels = { bullish: '📈 看涨', bearish: '📉 看跌', neutral: '⚖️ 中性', continuation: '🔄 趋势延续' };
+    const catLabels = { single: '单根K线', double: '双根组合', triple: '三根组合', multi: '趋势形态' };
+
+    document.getElementById('pd-name').textContent = p.name;
+    document.getElementById('pd-engname').textContent = p.engName;
+
+    const typeBadge = document.getElementById('pd-type-badge');
+    typeBadge.textContent = signalLabels[p.signal] || p.signal;
+    typeBadge.className = `signal-badge ${p.signal}`;
+
+    document.getElementById('pd-cat-badge').textContent = catLabels[p.category] || p.category;
+    document.getElementById('pd-description').textContent = p.description;
+    document.getElementById('pd-note').textContent = p.note;
+
+    const rulesList = document.getElementById('pd-rules');
+    const rulesSection = document.getElementById('pd-rules-section');
+    if (p.rules && p.rules.length > 0) {
+        rulesList.innerHTML = p.rules.map(r => `<li>${r}</li>`).join('');
+        rulesSection.style.display = '';
+    } else {
+        rulesSection.style.display = 'none';
+    }
+
+    modal.classList.add('show');
+
+    // 绘制详情Canvas
+    requestAnimationFrame(() => {
+        const dc = document.getElementById('pattern-detail-canvas');
+        const dpr = window.devicePixelRatio || 1;
+        dc.width = 160 * dpr;
+        dc.height = 120 * dpr;
+        dc.style.width = '160px';
+        dc.style.height = '120px';
+        dc.getContext('2d').scale(dpr, dpr);
+        drawPatternCanvas(dc, p, true);
+    });
+}
+
+function hidePatternDetail() {
+    document.getElementById('pattern-detail-modal').classList.remove('show');
+}
+
 // ========== 事件绑定 ==========
 
 function bindEvents() {
@@ -1743,12 +2142,12 @@ function bindEvents() {
     document.getElementById('btn-game-back').addEventListener('click', async () => {
         if (state.gameId && state.currentDay > 0) {
             if (confirm('退出将放弃当前游戏，确定吗？')) {
-                await api('/api/game/abandon', { game_id: state.gameId });
+                await api('/api/game/abandon', { game_id: state.gameId, user_id: state.user?.id });
                 state.gameId = null;
                 enterLobby();
             }
         } else if (state.gameId && state.currentDay === 0) {
-            await api('/api/game/abandon', { game_id: state.gameId });
+            await api('/api/game/abandon', { game_id: state.gameId, user_id: state.user?.id });
             state.gameId = null;
             enterLobby();
         } else {
@@ -1779,33 +2178,6 @@ function bindEvents() {
             updateChart();
         });
     });
-
-    // 资讯面板折叠/展开（底部抽屉模式）
-    const newsToggle = document.getElementById('news-toggle');
-    const newsBackdrop = document.getElementById('news-backdrop');
-    const newsSheetClose = document.getElementById('news-sheet-close');
-
-    function toggleNewsSheet(forceClose) {
-        const content = document.getElementById('news-content');
-        const bd = document.getElementById('news-backdrop');
-        const arrow = document.querySelector('#news-toggle .news-arrow');
-        if (!content) return;
-        const isOpen = content.classList.contains('open');
-        const shouldClose = forceClose || isOpen;
-        content.classList.toggle('open', !shouldClose);
-        if (bd) bd.classList.toggle('open', !shouldClose);
-        if (arrow) arrow.classList.toggle('open', !shouldClose);
-    }
-
-    if (newsToggle) {
-        newsToggle.addEventListener('click', () => toggleNewsSheet());
-    }
-    if (newsBackdrop) {
-        newsBackdrop.addEventListener('click', () => toggleNewsSheet(true));
-    }
-    if (newsSheetClose) {
-        newsSheetClose.addEventListener('click', () => toggleNewsSheet(true));
-    }
 
     // 交易弹窗
     document.getElementById('btn-modal-cancel').addEventListener('click', hideTradeModal);
@@ -1868,8 +2240,39 @@ function bindEvents() {
                 history.pushState({ view: 'view-ranking' }, '');
                 showView('view-ranking');
                 loadRankings('total');
+            } else if (view === 'patterns') {
+                history.pushState({ view: 'view-patterns' }, '');
+                enterPatterns();
             }
         });
+    });
+
+    // 图鉴页面
+    document.getElementById('btn-patterns-back').addEventListener('click', () => {
+        history.back();
+    });
+
+    document.querySelectorAll('.pattern-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.pattern-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            patternFilter.cat = btn.dataset.cat;
+            renderPatternGrid();
+        });
+    });
+
+    document.querySelectorAll('.signal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.signal-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            patternFilter.signal = btn.dataset.signal;
+            renderPatternGrid();
+        });
+    });
+
+    document.getElementById('btn-close-pattern-detail').addEventListener('click', hidePatternDetail);
+    document.getElementById('pattern-detail-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) hidePatternDetail();
     });
 }
 
@@ -1877,7 +2280,7 @@ function bindEvents() {
 function handleLogout() {
     if (state.gameId) {
         if (!confirm('当前有进行中的游戏，退出将放弃游戏。确定退出吗？')) return;
-        api('/api/game/abandon', { game_id: state.gameId }).catch(() => {});
+        api('/api/game/abandon', { game_id: state.gameId, user_id: state.user?.id }).catch(() => {});
     }
     // 清除状态
     state.user = null;
@@ -1924,6 +2327,9 @@ function handleBrowserBack(e) {
         case 'view-ranking':
             showView('view-ranking');
             loadRankings('total');
+            break;
+        case 'view-patterns':
+            enterPatterns();
             break;
         case 'view-result':
             // 结算页回退到大厅

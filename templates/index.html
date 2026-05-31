@@ -88,6 +88,10 @@
                 <span class="nav-icon">🏆</span>
                 <span class="nav-label">排行</span>
             </div>
+            <div class="nav-item" data-view="patterns">
+                <span class="nav-icon">📖</span>
+                <span class="nav-label">图鉴</span>
+            </div>
         </div>
     </div>
 
@@ -149,40 +153,6 @@
             <div class="profit-bar">
                 <span class="profit-label">收益率</span>
                 <span class="profit-value mono" id="info-profit">0.00%</span>
-            </div>
-        </div>
-
-        <!-- 资讯面板（触发按钮） -->
-        <div class="news-panel" id="news-panel" style="display:none;">
-            <div class="news-toggle" id="news-toggle">
-                <span class="news-toggle-icon">📰</span>
-                <span>资讯</span>
-                <span class="news-badge" id="news-badge" style="display:none">0</span>
-                <span class="news-arrow" id="news-arrow">▼</span>
-            </div>
-        </div>
-
-        <!-- 资讯底部抽屉（fixed覆盖层） -->
-        <div class="news-backdrop" id="news-backdrop"></div>
-        <div class="news-sheet" id="news-content">
-            <div class="news-sheet-handle"></div>
-            <div class="news-sheet-header">
-                <span>📰 资讯详情</span>
-                <button class="news-sheet-close" id="news-sheet-close">✕</button>
-            </div>
-            <div class="news-sheet-body">
-                <!-- 财报快照 -->
-                <div class="fin-snapshot" id="fin-snapshot" style="display:none;">
-                    <div class="fin-header">
-                        <span class="fin-title">📊 财报快照</span>
-                        <span class="fin-date" id="fin-date"></span>
-                    </div>
-                    <div class="fin-grid" id="fin-grid"></div>
-                </div>
-                <!-- 新闻分隔线 -->
-                <div class="news-divider" id="news-divider" style="display:none;">📢 公告动态</div>
-                <!-- 新闻列表 -->
-                <div class="news-list" id="news-list"></div>
             </div>
         </div>
 
@@ -315,6 +285,10 @@
                 <span class="nav-icon">🏆</span>
                 <span class="nav-label">排行</span>
             </div>
+            <div class="nav-item" data-view="patterns">
+                <span class="nav-icon">📖</span>
+                <span class="nav-label">图鉴</span>
+            </div>
         </div>
     </div>
 
@@ -331,6 +305,96 @@
         </div>
         <div class="history-list" id="history-list">
             <div class="empty-state">暂无记录</div>
+        </div>
+    </div>
+
+    <!-- ========== K线图鉴页 ========== -->
+    <div id="view-patterns" class="view">
+        <div class="page-header">
+            <button class="btn-icon" id="btn-patterns-back">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+            </button>
+            <h2>K线图鉴</h2>
+            <div style="width:44px"></div>
+        </div>
+
+        <div class="patterns-scroll-area">
+            <!-- 分类 Tab -->
+            <div class="pattern-tabs">
+                <button class="pattern-tab active" data-cat="all">全部</button>
+                <button class="pattern-tab" data-cat="single">单根</button>
+                <button class="pattern-tab" data-cat="double">双根</button>
+                <button class="pattern-tab" data-cat="triple">三根</button>
+                <button class="pattern-tab" data-cat="multi">趋势</button>
+            </div>
+
+            <!-- 信号过滤 -->
+            <div class="signal-filters">
+                <button class="signal-btn active" data-signal="all">全部</button>
+                <button class="signal-btn" data-signal="bullish">📈 看涨</button>
+                <button class="signal-btn" data-signal="bearish">📉 看跌</button>
+                <button class="signal-btn" data-signal="neutral">⚖️ 中性</button>
+            </div>
+
+            <!-- 统计行 -->
+            <div class="patterns-count-row">
+                <span id="patterns-count-text">共 <strong id="patterns-count">0</strong> 个形态</span>
+            </div>
+
+            <!-- 形态卡片网格 -->
+            <div class="patterns-grid" id="patterns-grid"></div>
+        </div>
+
+        <!-- 详情弹窗 -->
+        <div class="modal-mask" id="pattern-detail-modal">
+            <div class="modal-sheet pattern-detail-sheet">
+                <div class="modal-handle"></div>
+                <div class="pattern-detail-header">
+                    <div class="pattern-detail-canvas-wrap">
+                        <canvas id="pattern-detail-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="pattern-detail-meta">
+                        <h3 id="pd-name"></h3>
+                        <p id="pd-engname"></p>
+                        <div class="pd-badges">
+                            <span id="pd-type-badge" class="signal-badge"></span>
+                            <span id="pd-cat-badge" class="cat-badge"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pattern-detail-body">
+                    <div class="pd-section">
+                        <div class="pd-section-title">形态特征</div>
+                        <p id="pd-description"></p>
+                    </div>
+                    <div class="pd-section">
+                        <div class="pd-section-title">交易提示</div>
+                        <p id="pd-note"></p>
+                    </div>
+                    <div class="pd-section" id="pd-rules-section">
+                        <div class="pd-section-title">识别要点</div>
+                        <ul id="pd-rules"></ul>
+                    </div>
+                </div>
+                <button class="btn-modal-cancel" id="btn-close-pattern-detail" style="margin: 0 16px 16px">关闭</button>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item" data-view="lobby">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </div>
+            <div class="nav-item" data-view="ranking">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">排行</span>
+            </div>
+            <div class="nav-item active" data-view="patterns">
+                <span class="nav-icon">📖</span>
+                <span class="nav-label">图鉴</span>
+            </div>
         </div>
     </div>
 

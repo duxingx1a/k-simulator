@@ -18,6 +18,10 @@ venv/
 Thumbs.db
 desktop.ini
 
+# 用户数据（不提交到 Git，stock_data.db 含股票数据可提交）
+game.db
+game.db.bak
+
 # IDE
 .vscode/
 .idea/

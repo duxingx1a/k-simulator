@@ -22,7 +22,7 @@ except ImportError:
     print('❌ 请先安装 pandas：pip install pandas -i https://pypi.tuna.tsinghua.edu.cn/simple')
     sys.exit(1)
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'game.db')
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stock_data.db')
 
 # 代表性A股股票池（覆盖各行业、各市值、各风格）
 STOCK_POOL = [
@@ -119,48 +119,11 @@ def extract_segments(df, stock_code, stock_name, segment_days=SEGMENT_DAYS, coun
 
 
 def init_database():
-    """初始化数据库并导入真实股票数据"""
+    """初始化 stock_data.db 并导入真实股票数据"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
 
-    # 创建表结构（如果不存在）
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nickname TEXT UNIQUE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS games (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            scenario_id INTEGER NOT NULL,
-            current_day INTEGER DEFAULT 0,
-            initial_cash REAL DEFAULT 100000,
-            cash REAL DEFAULT 100000,
-            shares INTEGER DEFAULT 0,
-            avg_cost REAL DEFAULT 0,
-            status TEXT DEFAULT 'playing',
-            profit_rate REAL DEFAULT 0,
-            final_asset REAL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-        CREATE TABLE IF NOT EXISTS trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            game_id INTEGER NOT NULL,
-            day INTEGER NOT NULL,
-            action TEXT NOT NULL,
-            price REAL NOT NULL,
-            shares INTEGER NOT NULL,
-            amount REAL NOT NULL,
-            cash_after REAL NOT NULL,
-            shares_after INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (game_id) REFERENCES games(id)
-        );
-    ''')
-
-    # 删除旧的场景表，重建带真实数据字段的版本
+    # 只建 scenarios 表（users/games/trades 由 app.py 的 init_db() 负责）
     conn.execute('DROP TABLE IF EXISTS scenarios')
     conn.execute('''
         CREATE TABLE scenarios (
@@ -218,7 +181,7 @@ def init_database():
         print(f'\n✅ 成功导入 {len(all_segments)} 个真实数据场景')
 
     conn.close()
-    print(f'📁 数据库路径：{DB_PATH}')
+    print(f'📁 stock_data.db 路径：{DB_PATH}')
     print('现在可以运行 python app.py 启动应用了！')
 
 
